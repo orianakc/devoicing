@@ -240,22 +240,67 @@ def addData(grid, fname, writer):
 				info.append("NA")
 
 			# # Syll duration
-			if re.search("(?<!.)[iuIU](?!.)",token.mark) == None:
-				if re.search("<cl>,?[a-z]?",phoneTier[i-1].mark):
-					info.append(token.duration() + phoneTier[i-1].duration()) # What about cases where U is alone? 
-				else: 
-					info.append(token.duration())
-			elif re.search("[aeiouAEIOU#]{1}",phoneTier[i-1].mark):
-				info.append(token.duration())
-			else:
-				if re.search("<cl>,?[A-Za-z]?",phoneTier[i-1].mark):
-					info.append(token.duration() + phoneTier[i-1].duration())
-				elif re.search("[a-zA-Z]{1}",phoneTier[i-1].mark) and re.search("(?<!.)<[A-Za-z]{2}>(?!.)",phoneTier[i-2].mark):
-					info.append(token.duration() + phoneTier[i-1].duration() + phoneTier[i-2].duration())
-				elif re.search("[A-Za-z]{1}",phoneTier[i-1].mark):
-					info.append(token.duration() + phoneTier[i-1].duration())
-				else:
-					info.append("ERR")
+			syllable = []
+			duration = 0
+			onset = ""
+			coda = ""
+			### FIGURE OUT THE CODA STUFF LATER >:(
+
+			if re.search("^[a-zA-Z]{1,2},[iuIU]$",token.mark):
+				if re.search("<cl>",phoneTier[i-1].mark):
+					syllable.append(phoneTier[i-1].mark)
+				syllable.append(token.mark)
+				duration = phoneTier[i-1].duration() + token.duration()
+			elif re.search("^<cl>,[a-zA-Z]{1,2},[iuIU]$",token.mark):
+				syllable.append(token.mark)
+				duration = token.duration()
+			elif re.search("^[iuIU]$",token.mark):
+				duration += token.duration()
+				if re.search("[aeiou]$",phoneTier[i-1].mark):
+					pass
+				elif re.search("^<cl>,[a-zA-Z]{1,2}$",phoneTier[i-1].mark):
+					syllable.append(phoneTier[i-1].mark)
+					duration += phoneTier[i-1].duration()
+				elif re.search("^[a-zA-Z]{1,2}$",phoneTier[i-1].mark):
+					duration += phoneTier[i-1].duration()
+					if re.search("^<cl>$",phoneTier[i-2].mark):
+						duration += phoneTier[i-2].duration()
+						syllable.append(phoneTier[i-2].mark)
+					syllable.append(phoneTier[i-1].mark)
+				syllable.append(token.mark)
+				if re.search("^[NQ]",phoneTier[i+1].mark):
+					syllable.append(re.search("^([NQ])",phoneTier[i+1].mark).group())
+					coda = re.search("^([NQ])",phoneTier[i+1].mark).group()
+					if re.search("^[NQ]$",phoneTier[i+1].mark):
+						duration += phoneTier[i+1].duration()
+					else: 
+						duration = "ERR_CODA_OVERLAP"		
+			info.append("".join(syllable))
+			info.append(duration)
+
+
+
+			# 	re.search("(.,[iuIU])",token.mark).group()
+			# 	syllable.append(onset.group())
+			# elif re.search("(.),[iuIU]",token.mark)
+
+			# OLD CODE
+			# if re.search("(?<!.)[iuIU](?!.)",token.mark) == None:  ## If the vowel is not alone on the tier
+			# 	if re.search("<cl>,?[a-z]?",phoneTier[i-1].mark):   ## 
+			# 		info.append(token.duration() + phoneTier[i-1].duration()) # What about cases where U is alone? 
+			# 	else: 
+			# 		info.append(token.duration())
+			# elif re.search("[aeiouAEIOU#]{1}",phoneTier[i-1].mark):
+			# 	info.append(token.duration())
+			# else:
+			# 	if re.search("<cl>,?[A-Za-z]?",phoneTier[i-1].mark):
+			# 		info.append(token.duration() + phoneTier[i-1].duration())
+			# 	elif re.search("[a-zA-Z]{1}",phoneTier[i-1].mark) and re.search("(?<!.)<[A-Za-z]{2}>(?!.)",phoneTier[i-2].mark):
+			# 		info.append(token.duration() + phoneTier[i-1].duration() + phoneTier[i-2].duration())
+			# 	elif re.search("[A-Za-z]{1}",phoneTier[i-1].mark):
+			# 		info.append(token.duration() + phoneTier[i-1].duration())
+			# 	else:
+			# 		info.append("ERR")
 
 			# Previous manner
 
@@ -292,39 +337,75 @@ def addData(grid, fname, writer):
 
 
 # Adjacent devoiced v? Search 3 left and 3 right. 
-			## Devoiced left? 
-			adj = ["ERR"]
+# ## Devoiced left? 
+			adjleft = []
+			try: 
+				adjleft.append(phoneTier[i-3].mark)
+			except: 
+				continue
 			try:
-				if re.search("[aeiouAEIOU]",phoneTier[i-1].mark):
-					if re.search("[IU]",phoneTier[i-1].mark):
-						adj=["L"]
-					elif re.search("[aeiouAEIOU]",phoneTier[i-2].mark):
-						if re.search("[IU](?!,)",phoneTier[i-2].mark):
-							adj=["L"]
-						else:
-							adj=["N"]
-					else:
-						adj=["N"]
-				else:
-					adj=["N"]
-			except:
-				adj=["N"]
-			info.append("".join(adj))
-			## Devoiced right?
-			adj = ["ERR"]
-			if re.search("[aeiouAEIOU]",phoneTier[i+1].mark):
-				if re.search("[IU]",phoneTier[i+1].mark):
-					adj=["R"]
-				elif re.search("[aeiouAEIOU]",phoneTier[i+2].mark):
-					if re.search("[IU](?!,)",phoneTier[i+2].mark):
-						adj=["R"]
-					else:
-						adj=["N"]
-				else:
-					adj=["N"]
+				adjleft.append(phoneTier[i-2].mark)
+			except: 
+				continue
+			try:
+				adjleft.append(phoneTier[i-1].mark)
+			except: 
+				continue
+			if re.search("[IU](?!.*[aeiou])","".join(adjleft)):
+				info.append("L")
 			else:
-				adj=["N"]
-			info.append("".join(adj))
+				info.append("N")
+			info.append(" ".join(adjleft))
+			# adj = ["ERR"]
+			# try:
+			# 	if re.search("[aeiouAEIOU]",phoneTier[i-1].mark):
+			# 		if re.search("[IU]",phoneTier[i-1].mark):
+			# 			adj=["L"]
+			# 		elif re.search("[aeiouAEIOU]",phoneTier[i-2].mark):
+			# 			if re.search("[IU](?!,)",phoneTier[i-2].mark):
+			# 				adj=["L"]
+			# 			else:
+			# 				adj=["N"]
+			# 		else:
+			# 			adj=["N"]
+			# 	else:
+			# 		adj=["N"]
+			# except:
+			# 	adj=["N"]
+			# info.append("".join(adj))
+## Devoiced right?
+			adjleft = []
+			try: 
+				adjleft.append(phoneTier[i+1].mark)
+			except: 
+				continue
+			try:
+				adjleft.append(phoneTier[i+2].mark)
+			except: 
+				continue
+			try:
+				adjleft.append(phoneTier[i+3].mark)
+			except: 
+				continue
+			if re.search("[IU]","".join(adjleft)) and re.search("[aeiou]","".join(adjleft))==None:
+				info.append("R")
+			else:
+				info.append("N")
+			info.append(" ".join(adjleft))
+			# adj = ["ERR"]
+			# if re.search("[aeiouAEIOU]",phoneTier[i+1].mark):
+			# 	if re.search("[IU]",phoneTier[i+1].mark):
+			# 		adj=["R"]
+			# 	elif re.search("[aeiouAEIOU]",phoneTier[i+2].mark):
+			# 		if re.search("[IU](?!,)",phoneTier[i+2].mark):
+			# 			adj=["R"]
+			# 		else:
+			# 			adj=["N"]
+			# 	else:
+			# 		adj=["N"]
+			# else:
+			# 	adj=["N"]
+			# info.append("".join(adj))
 			# LAST COLUMN MARKER
 			info.append("#")
 			#Stuff:
