@@ -148,6 +148,52 @@ def addData(grid, fname, writer):
 			info.append("".join(seg))
 			follSeg = "".join(seg)
 
+# # Syll duration
+			syllable = []
+			duration = 0
+			onset = ""
+			coda = ""
+
+			if re.search("^[a-zA-Z]{1,2},[iuIU]$",token.mark):			## "sj,I" or "c,U"
+				if re.search("^<cl>$",phoneTier[i-1].mark):				## "<cl>" + "c,U"
+					syllable.append(phoneTier[i-1].mark)
+					duration += phoneTier[i-1].duration()
+				syllable.append(token.mark)
+				duration += token.duration()
+			elif re.search("^<cl>,[a-zA-Z]{1,2},[iuIU]$",token.mark):	## "<cl>,c,U"
+				syllable.append(token.mark)
+				duration = token.duration()
+			elif re.search("^[iuIU].*$",token.mark):					## "U" or "i,N"
+				if re.search("[aeiou]$",phoneTier[i-1].mark):			## Ignores prev interval containing V
+					pass
+				elif re.search("^<cl>,[a-zA-Z]{1,2}$",phoneTier[i-1].mark): ## Captures "<cl>,k"
+					syllable.append(phoneTier[i-1].mark)
+					duration += phoneTier[i-1].duration()
+				elif re.search("^[a-zA-Z]{1,2}$",phoneTier[i-1].mark):	## Captures "k"
+					duration += phoneTier[i-1].duration()
+					if re.search("^<cl>$",phoneTier[i-2].mark):			## Adds "<cl>" of "k"
+						duration += phoneTier[i-2].duration()
+						syllable.append(phoneTier[i-2].mark)
+					syllable.append(phoneTier[i-1].mark)
+				if re.search("^[iuIU],?N?$",token.mark):
+					syllable.append(token.mark) 
+					duration += token.duration()  
+				if re.search("^[NQ]",phoneTier[i+1].mark):				## 
+					syllable.append(re.search("^([NQ])",phoneTier[i+1].mark).group())
+					coda = re.search("^([NQ])",phoneTier[i+1].mark).group()
+					if re.search("^[NQ]$",phoneTier[i+1].mark):
+						duration += phoneTier[i+1].duration()
+					else: 
+						duration = "ERR_CODA_OVERLAP"
+			else: 
+				syllable.append(re.search("(.*[iuIU]),?.*$",token.mark).group())
+				duration = "ERR_OVERLAP"
+
+			info.append("".join(syllable))
+			info.append(duration)
+
+
+
 			# HVD.envt change this to use prevSeg
 			if prevSeg in "k ky kj t tj ty c cj cy F h hy hj p py pj s sj sy" and follSeg in "k ky kj t tj ty c cj cy F h hy hj p py pj s sj sy":
 				info.append('Y')
@@ -163,10 +209,10 @@ def addData(grid, fname, writer):
 			info.append(devoiced)
 
 #DEBUG ME   # Onset 0/1
-			info.append("Y") if re.search("[kgsztdnhbpmyrwcF]", token.mark) or re.search("[kgsztdnhbpmyrwcF]", phoneTier[i-1].mark) else info.append("N")
+			# info.append("Y") if re.search("[kgsztdnhbpmyrwcF]", token.mark) or re.search("[kgsztdnhbpmyrwcF]", phoneTier[i-1].mark) else info.append("N")
 
 # DEBUG ME # Coda 0/1
-			info.append("Y") if re.search("[NQ]", token.mark) or re.search("[NQ]", phoneTier[i+1].mark) else info.append("N")
+			# info.append("Y") if re.search("[NQ]", token.mark) or re.search("[NQ]", phoneTier[i+1].mark) else info.append("N")
 
 			# Accent - get from point tier
 			tones = []	
@@ -239,68 +285,7 @@ def addData(grid, fname, writer):
 			else:
 				info.append("NA")
 
-			# # Syll duration
-			syllable = []
-			duration = 0
-			onset = ""
-			coda = ""
-			### FIGURE OUT THE CODA STUFF LATER >:(
 
-			if re.search("^[a-zA-Z]{1,2},[iuIU]$",token.mark):
-				if re.search("<cl>",phoneTier[i-1].mark):
-					syllable.append(phoneTier[i-1].mark)
-				syllable.append(token.mark)
-				duration = phoneTier[i-1].duration() + token.duration()
-			elif re.search("^<cl>,[a-zA-Z]{1,2},[iuIU]$",token.mark):
-				syllable.append(token.mark)
-				duration = token.duration()
-			elif re.search("^[iuIU]$",token.mark):
-				duration += token.duration()
-				if re.search("[aeiou]$",phoneTier[i-1].mark):
-					pass
-				elif re.search("^<cl>,[a-zA-Z]{1,2}$",phoneTier[i-1].mark):
-					syllable.append(phoneTier[i-1].mark)
-					duration += phoneTier[i-1].duration()
-				elif re.search("^[a-zA-Z]{1,2}$",phoneTier[i-1].mark):
-					duration += phoneTier[i-1].duration()
-					if re.search("^<cl>$",phoneTier[i-2].mark):
-						duration += phoneTier[i-2].duration()
-						syllable.append(phoneTier[i-2].mark)
-					syllable.append(phoneTier[i-1].mark)
-				syllable.append(token.mark)
-				if re.search("^[NQ]",phoneTier[i+1].mark):
-					syllable.append(re.search("^([NQ])",phoneTier[i+1].mark).group())
-					coda = re.search("^([NQ])",phoneTier[i+1].mark).group()
-					if re.search("^[NQ]$",phoneTier[i+1].mark):
-						duration += phoneTier[i+1].duration()
-					else: 
-						duration = "ERR_CODA_OVERLAP"		
-			info.append("".join(syllable))
-			info.append(duration)
-
-
-
-			# 	re.search("(.,[iuIU])",token.mark).group()
-			# 	syllable.append(onset.group())
-			# elif re.search("(.),[iuIU]",token.mark)
-
-			# OLD CODE
-			# if re.search("(?<!.)[iuIU](?!.)",token.mark) == None:  ## If the vowel is not alone on the tier
-			# 	if re.search("<cl>,?[a-z]?",phoneTier[i-1].mark):   ## 
-			# 		info.append(token.duration() + phoneTier[i-1].duration()) # What about cases where U is alone? 
-			# 	else: 
-			# 		info.append(token.duration())
-			# elif re.search("[aeiouAEIOU#]{1}",phoneTier[i-1].mark):
-			# 	info.append(token.duration())
-			# else:
-			# 	if re.search("<cl>,?[A-Za-z]?",phoneTier[i-1].mark):
-			# 		info.append(token.duration() + phoneTier[i-1].duration())
-			# 	elif re.search("[a-zA-Z]{1}",phoneTier[i-1].mark) and re.search("(?<!.)<[A-Za-z]{2}>(?!.)",phoneTier[i-2].mark):
-			# 		info.append(token.duration() + phoneTier[i-1].duration() + phoneTier[i-2].duration())
-			# 	elif re.search("[A-Za-z]{1}",phoneTier[i-1].mark):
-			# 		info.append(token.duration() + phoneTier[i-1].duration())
-			# 	else:
-			# 		info.append("ERR")
 
 			# Previous manner
 
@@ -317,23 +302,6 @@ def addData(grid, fname, writer):
 				info.append(poaDict[follSeg])
 			except:
 				info.append("NA")			# Could make this into a function like "get POA"
-			# poa= []
-			# if info[5] in poaDict.keys():
-			# 	poa.append(poaDict[info[5]])
-			# elif re.search(",([a-zIU]+)",info[5]):
-			# 	cons = re.search(",([a-zIU]+)",info[5])
-			# 	poa.append(poaDict[cons.groups()[0]])
-			# info.append("".join(poa))
-
-			# # Following POA
-			# poa= []
-			# if info[6] in poaDict.keys():
-			# 	poa.append(poaDict[info[6]])
-			# elif re.search("(?<cl>,)([a-zIU]+)",info[6]):
-			# 	cons = re.search("([a-zIU]+),",info[6])
-			# 	poa.append(poaDict[cons.groups()[0]])
-			# info.append("".join(poa))
-
 
 
 # Adjacent devoiced v? Search 3 left and 3 right. 
